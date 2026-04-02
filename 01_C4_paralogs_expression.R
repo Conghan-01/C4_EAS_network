@@ -150,7 +150,9 @@ for (g in c("C4A", "C4B")) {
 #[1] Prenatal Stage (Pearson Correlation - Age vs TPM)
 #C4A : r = 0.140, P = 2.14e-01
 #C4B : r = 0.107, P = 3.43e-01
-
+#[2] Postnatal Stage (Pearson Correlation - Age vs TPM)
+#C4A : r = 0.225, P = 4.50e-02
+#C4B : r = 0.316, P = 4.35e-03
 
 # 6.2 Postnatal Stage (Increase testing)
 cat("\n[2] Postnatal Stage (Pearson Correlation - Age vs TPM)\n")
