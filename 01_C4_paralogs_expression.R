@@ -178,4 +178,73 @@ for (g in c("C4A", "C4B")) {
 
 
 # supplemental fig1 expression
+plot_data <- df_target %>%
+  pivot_longer(cols = c("C4A", "C4B"), names_to = "Gene", values_to = "TPM") %>%
+  mutate(
+    Phase = case_when(
+      Stage == "stage1" ~ "Prenatal",
+      Stage %in% c("stage2", "stage3") ~ "Postnatal"
+    ),
 
+    Age_Group = case_when(
+      Phase == "Prenatal" ~ "Prenatal",
+      Phase == "Postnatal" & age <= 65 ~ "0-65y",
+      Phase == "Postnatal" & age > 65 ~ ">65y"
+    ),
+    Log2TPM = log2(TPM + 1) 
+  ) %>%
+  mutate(
+    Age_Group = factor(Age_Group, levels = c("Prenatal", "0-65y", ">65y")),
+    Gene = factor(Gene, levels = c("C4A", "C4B"))
+  )
+
+my_comparisons <- list(
+  c("Prenatal", "0-65y"), 
+  c("0-65y", ">65y"), 
+  c("Prenatal", ">65y")
+)
+
+p_violin <- ggplot(plot_data, aes(x = Age_Group, y = Log2TPM, fill = Age_Group)) +
+  geom_violin(trim = FALSE, alpha = 0.5, color = NA) +
+  geom_boxplot(width = 0.15, fill = "white", color = "black", outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 1.2, color = "black", alpha = 0.4) +
+  facet_wrap(~ Gene) +
+  
+  scale_fill_manual(values = c("Prenatal" = "#AECBEB", 
+                               "0-65y"    = "#C1DDB4", 
+                               ">65y"     = "#F4ECA1")) +
+  
+stat_compare_means(
+    comparisons = my_comparisons, 
+    method = "wilcox.test",     
+    label = "p.signif",    
+    step.increase = 0.12,   
+    tip.length = 0.02,
+    hide.ns = FALSE         
+  ) +
+  
+  labs(
+    title = "C4A & C4B Expression Across Stages",
+    x = NULL, 
+    y = "Expression (log2(TPM + 1))"
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.15))) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 18, hjust = 0.5, color = "black"),
+    axis.text.x = element_text(size = 15, color = "black"),
+    axis.text.y = element_text(size = 15, color = "black"),
+    axis.title.y = element_text(size = 16, color = "black"),
+    strip.text = element_text(size = 16, color = "black"),
+    strip.background = element_rect(fill = "white", color = "black"), 
+    legend.position = "none", 
+    panel.grid.major.x = element_blank(), 
+    panel.border = element_rect(color = "black", linewidth = 1)
+  )
+
+print(p_violin)
+ggsave("C4_expression_violin_with_p.png", plot = p_violin, width =6, height =4, dpi = 500)
+
+#p value for c("Prenatal", "0-65y"): C4A 0.0056 ; C4B 0.0078
+#p value for  c("0-65y", ">65y"): C4A  0.0042 ; C4B 0.00073
+#p value for c("Prenatal", ">65y"): C4A  1.8e-6 ; C4B:3.9e-7
