@@ -175,3 +175,7 @@ for (g in c("C4A", "C4B")) {
 #[3] Stage Comparison (ANOVA: Prenatal vs 0-65y vs >65y)
 #C4A : F = 13.50, P = 3.87e-06
 #C4B : F = 9.13, P = 1.78e-04
+
+
+# supplemental fig1 expression
+
