@@ -133,7 +133,7 @@ print(as.data.frame(correlation_results))
 # 1  C4A    0.3589516 3.379584e-06
 # 2  C4B    0.3663453 2.042710e-06
 
-cat("\n--- Spearman Correlation Results (Entire Lifespan;Pearson) ---\n")
+cat("\n--- Pearson Correlation Result (Entire Lifespan;Pearson) ---\n")
 correlation_results <- df_plot %>%
   group_by(Gene) %>%
   summarise(
