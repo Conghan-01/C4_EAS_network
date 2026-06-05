@@ -115,23 +115,29 @@ ggsave("C4B_expression_boxplot_reNum_lifespantrajectory_new.png", plot = p_C4B, 
 ggsave("C4B_expression_boxplot_reNum_lifespantrajectory_new.pdf", plot = p_C4B, width = 8, height = 7, dpi = 500)
 
 
-# 8. Calculate Pearson correlation (Age vs TPM) 
+# 8. Calculate Pearson correlation (Separated by Prenatal/Postnatal) 
+# 8. Calculate Spearman correlation
 library(broom)
-
-cat("\n--- Spearman Correlation Results (Entire Lifespan; spearman) ---\n")
+cat("\n--- Spearman Correlation Results (Prenatal vs Postnatal) ---\n")
 correlation_results <- df_plot %>%
-  group_by(Gene) %>%
+  mutate(Life_Phase = ifelse(grepl("prenatal", Period), "Prenatal", "Postnatal")) %>%
+  group_by(Life_Phase, Gene) %>%
   summarise(
     Spearman_rho = cor.test(age, TPM, method = "spearman", exact = FALSE)$estimate,
     P_value = cor.test(age, TPM, method = "spearman", exact = FALSE)$p.value,
     .groups = "drop"
-  )
+  ) %>%
+  arrange(desc(Life_Phase), Gene)
 
 print(as.data.frame(correlation_results))
-#--- Spearman Correlation Results (Entire Lifespan) ---
-#  Gene Spearman_rho      P_value
-# 1  C4A    0.3589516 3.379584e-06
-# 2  C4B    0.3663453 2.042710e-06
+
+# --- Spearman Correlation Results (Prenatal vs Postnatal) ---
+#  Life_Phase Gene Spearman_rho     P_value
+# 1   Prenatal  C4A    0.2291454 0.040896979
+# 2   Prenatal  C4B    0.1715842 0.128046051
+# 3  Postnatal  C4A    0.2933543 0.008694770
+# 4  Postnatal  C4B    0.3353562 0.002517686
+------------------------------------------------------------
 
 cat("\n--- Pearson Correlation Result (Entire Lifespan;Pearson) ---\n")
 correlation_results <- df_plot %>%
