@@ -8,7 +8,114 @@
 #              C4 paralogs (C4A and C4B) compared to background genes using 
 #              human prefrontal cortex RNA-seq data.
 # ==============================================================================
+#Fig1A and 1B
+##################      EAS      #####################################
+#######################################################################
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(ggpubr)
+})
 
+# Set paths (keep your actual paths unchanged)
+setwd("/gpfs/hpc/home/chenchao/hanc/project/C4_CNB2025/figures/fig1")
+meta_path <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/01mixbatches_group/meta.txt2"
+tpm_path  <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/01mixbatches_group/subset_tpm.txt"
+
+# 1. Read data
+meta <- read.table(meta_path, header = TRUE, stringsAsFactors = FALSE)
+tpm <- read.table(tpm_path, header = TRUE, row.names = 1, check.names = FALSE)
+
+# 2. Extract target genes (C4A / C4B)
+target_genes <- c("C4A" = "ENSG00000244731.9", 
+                  "C4B" = "ENSG00000224389.9")
+
+valid_genes <- target_genes[target_genes %in% rownames(tpm)]
+if(length(valid_genes) == 0) stop("Error: Target gene IDs not found in TPM matrix.")
+
+tpm_t <- as.data.frame(t(tpm[valid_genes, , drop = FALSE]))
+colnames(tpm_t) <- names(valid_genes)
+tpm_t$sample <- rownames(tpm_t)
+
+# 3. Merge and classify by developmental stages (Infancy excluded)
+df_plot <- merge(meta, tpm_t, by = "sample") %>%
+  pivot_longer(cols = all_of(names(valid_genes)), names_to = "Gene", values_to = "TPM") %>%
+  mutate(
+    # Adjust prenatal stage thresholds based on PCW to GW conversion (GW = PCW + 2)
+    Period = case_when(
+      Stage == "stage1" & age < 15 ~ "Early, prenatal",                   
+      Stage == "stage1" & age >= 15 & age < 26 ~ "Middle, prenatal",     
+      # Fix gap: changed 28 to 26 to prevent losing samples from weeks 26-27
+      Stage == "stage1" & age >= 26 ~ "Late, prenatal",                   
+      # Exclude Infancy (< 1)
+      Stage %in% c("stage2", "stage3") & age >= 1 & age < 12 ~ "Childhood",
+      Stage %in% c("stage2", "stage3") & age >= 12 & age < 20 ~ "Adolescence",
+      Stage %in% c("stage2", "stage3") & age >= 20 & age < 40 ~ "Young adulthood",
+      Stage %in% c("stage2", "stage3") & age >= 40 & age < 60 ~ "Middle adulthood",
+      Stage %in% c("stage2", "stage3") & age >= 60 ~ "Late adulthood"
+    ),
+    # Core modification: Update factor levels to ensure correct X-axis order
+    Period = factor(Period, levels = c(
+      "Early, prenatal", "Middle, prenatal", "Late, prenatal",
+      "Childhood", "Adolescence", "Young adulthood", "Middle adulthood", "Late adulthood"
+    )),
+    # Generate a numeric X-axis variable for geom_smooth and continuous scaling
+    Period_Num = as.numeric(Period)
+  ) %>%
+  filter(!is.na(Period)) # Automatically exclude Infancy and unmapped samples
+
+# 4. Extract unique periods and their numeric mapping for the X-axis
+axis_labels <- df_plot %>%
+  select(Period_Num, Period) %>%
+  distinct() %>%
+  arrange(Period_Num)
+
+
+# ---------------------------------------------------------
+# 5. Create plotting function for C4A and C4B
+# ---------------------------------------------------------
+plot_gene_trajectory <- function(gene_name, box_color, y_label = "TPM") {
+  
+  # Filter data for a single gene
+  df_sub <- df_plot %>% filter(Gene == gene_name)
+  
+  p <- ggplot(df_sub, aes(x = Period_Num, y = TPM)) + 
+  
+    geom_smooth(method = "loess", se = TRUE, 
+                color = "#4169E1", fill = "grey85", alpha = 0.4, span = 0.8) +
+    geom_boxplot(aes(group = Period_Num), 
+                 width = 0.35, fill = box_color, color = "black", 
+                 outlier.shape = NA) +
+    # Map numeric breaks back to period names without sample sizes
+    scale_x_continuous(breaks = axis_labels$Period_Num, 
+                       labels = axis_labels$Period) +
+    coord_cartesian(ylim = c(0, 50)) +
+    theme_classic(base_size = 22) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "black", size = 18, lineheight = 0.8),
+      axis.text.y = element_text(color = "black", size = 20),
+      axis.title = element_text(face = "bold", size = 22),
+      axis.line = element_line(linewidth = 1),
+      axis.ticks = element_line(linewidth = 1),
+      plot.title = element_text(face = "bold", size = 24, hjust = 0.5),
+      plot.margin = margin(t = 20, r = 20, b = 20, l = 40)
+    ) +
+    labs(title = gene_name, x = NULL, y = y_label)
+  
+  return(p)
+}
+
+# 6. Generate and save C4A plot (using light red)
+p_C4A <- plot_gene_trajectory("C4A", "#E69191")
+ggsave("C4A_expression_boxplot_reNum_lifespantrajectory_new.png", plot = p_C4A, width = 8, height = 7, dpi = 500)
+ggsave("C4A_expression_boxplot_reNum_lifespantrajectory_new.pdf", plot = p_C4A, width = 8, height = 7, dpi = 500)
+
+# 7. Generate and save C4B plot (using light blue)
+p_C4B <- plot_gene_trajectory("C4B", "#92B5CA")
+ggsave("C4B_expression_boxplot_reNum_lifespantrajectory_new.png", plot = p_C4B, width = 8, height = 7, dpi = 500)
+ggsave("C4B_expression_boxplot_reNum_lifespantrajectory_new.pdf", plot = p_C4B, width = 8, height = 7, dpi = 500)
+
+############################################# Supplementary Figure 1A ###############################################
+ 
 suppressPackageStartupMessages({
   library(tidyverse)
   library(ggpubr)
@@ -178,7 +285,7 @@ for (g in c("C4A", "C4B")) {
 #C4B : F = 9.13, P = 1.78e-04
 
 
-# supplemental fig1 expression
+############################################# Supplementary Fig1B expression #############################################
 plot_data <- df_target %>%
   pivot_longer(cols = c("C4A", "C4B"), names_to = "Gene", values_to = "TPM") %>%
   mutate(
@@ -252,7 +359,7 @@ ggsave("C4_expression_violin_with_p.png", plot = p_violin, width =6, height =4, 
 
 
 
-######### 2. Sex difference of C4 expression ########
+############################################# 2. Sex difference of C4 expression #############################################
 # ==============================================================================
 # C4 Sex Difference Analysis (Corrected for Age and RIN)
 # ==============================================================================
