@@ -116,8 +116,24 @@ ggsave("C4B_expression_boxplot_reNum_lifespantrajectory_new.pdf", plot = p_C4B, 
 
 
 # 8. Calculate Pearson correlation (Age vs TPM) 
-
 library(broom)
+
+cat("\n--- Spearman Correlation Results (Entire Lifespan; spearman) ---\n")
+correlation_results <- df_plot %>%
+  group_by(Gene) %>%
+  summarise(
+    Spearman_rho = cor.test(age, TPM, method = "spearman", exact = FALSE)$estimate,
+    P_value = cor.test(age, TPM, method = "spearman", exact = FALSE)$p.value,
+    .groups = "drop"
+  )
+
+print(as.data.frame(correlation_results))
+#--- Spearman Correlation Results (Entire Lifespan) ---
+#  Gene Spearman_rho      P_value
+# 1  C4A    0.3589516 3.379584e-06
+# 2  C4B    0.3663453 2.042710e-06
+
+cat("\n--- Spearman Correlation Results (Entire Lifespan;Pearson) ---\n")
 correlation_results <- df_plot %>%
   group_by(Gene) %>%
   summarise(
@@ -127,7 +143,7 @@ correlation_results <- df_plot %>%
   )
 print(as.data.frame(correlation_results))
 
-# --- Pearson Correlation Results (Entire Lifespan) ---
+# --- Pearson Correlation Results (Entire Lifespan;Pearson) ---
 #  Gene Pearson_r      P_value
 # 1  C4A 0.3225135 3.383484e-05
 # 2  C4B 0.2951021 1.592491e-04
