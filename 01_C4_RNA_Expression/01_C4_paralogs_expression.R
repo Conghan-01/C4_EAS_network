@@ -114,6 +114,24 @@ p_C4B <- plot_gene_trajectory("C4B", "#92B5CA")
 ggsave("C4B_expression_boxplot_reNum_lifespantrajectory_new.png", plot = p_C4B, width = 8, height = 7, dpi = 500)
 ggsave("C4B_expression_boxplot_reNum_lifespantrajectory_new.pdf", plot = p_C4B, width = 8, height = 7, dpi = 500)
 
+
+# 8. Calculate Pearson correlation (Age vs TPM) 
+
+library(broom)
+correlation_results <- df_plot %>%
+  group_by(Gene) %>%
+  summarise(
+    Pearson_r = cor.test(age, TPM, method = "pearson")$estimate,
+    P_value = cor.test(age, TPM, method = "pearson")$p.value,
+    .groups = "drop"
+  )
+print(as.data.frame(correlation_results))
+
+# --- Pearson Correlation Results (Entire Lifespan) ---
+#  Gene Pearson_r      P_value
+# 1  C4A 0.3225135 3.383484e-05
+# 2  C4B 0.2951021 1.592491e-04
+
 ############################################# Supplementary Figure 1A ###############################################
  
 suppressPackageStartupMessages({
