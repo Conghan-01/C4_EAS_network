@@ -2,7 +2,7 @@
 
 > Spatiotemporal Regulation, Structural Variation, and Co-expression Networks of the *C4* Locus in the Developing Human Brain
 > Central South University
-> Manuscript in preparation · 2026
+> Manuscript in submission · 2026
 
 ![Pipeline Status](https://img.shields.io/badge/Pipeline-Stable-success)
 ![License](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey)
