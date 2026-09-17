@@ -316,6 +316,42 @@ for (g in c("C4A", "C4B")) {
   cat(sprintf("%s : r = %.3f, P = %.2e\n", g, res$estimate, res$p.value))
 }
 
+
+# Statistical Analysis
+#stat_data <- df_target %>%
+#  pivot_longer(cols = c("C4A", "C4B"), names_to = "Gene", values_to = "TPM") %>%
+#  mutate(
+#    Phase = case_when(
+#      Stage == "stage1" ~ "Prenatal",
+#      Stage %in% c("stage2", "stage3") ~ "Postnatal"
+#    )
+#  )
+#cat("\nCalculating Pearson correlations and generating Supplementary Table...\n")
+#stat_results <- list()
+#for (p in c("Prenatal", "Postnatal")) {
+#  for (g in c("C4A", "C4B")) {
+#    tmp <- stat_data %>% filter(Gene == g, Phase == p)
+#    res <- cor.test(tmp$age, tmp$TPM, method = "pearson")
+#    cat(sprintf("[%s] %s : r = %.3f, P = %.2e\n", p, g, res$estimate, res$p.value))    
+  # Extract statistics and format them into a data frame row
+#    stat_results[[paste(p, g, sep = "_")]] <- data.frame(
+#      Developmental_Stage = p,
+#      Gene = g,
+#      Pearsons_r = round(res$estimate, 3),
+#      P_value = signif(res$p.value, 3), 
+#      N = nrow(tmp),                    # Calculates exact sample size
+#      CI_95_lower = round(res$conf.int[1], 3),
+#      CI_95_upper = round(res$conf.int[2], 3),
+#      stringsAsFactors = FALSE
+#    )
+#  }
+#}
+# Combine all rows into a single table
+#final_stat_table <- bind_rows(stat_results)
+#output_file <- "Supplementary_Table_2_Correlation_Stats.csv"
+#write.csv(final_stat_table, output_file, row.names = FALSE, quote = FALSE)
+
+
 # Developmental Stages Comparison (ANOVA)
 cat("\n[3] Stage Comparison (ANOVA: Prenatal vs 0-65y vs >65y)\n")
 for (g in c("C4A", "C4B")) {
@@ -465,7 +501,7 @@ p_sex <- ggplot(sex_plot_df, aes(x = Phase, y = Corrected_Value, fill = Sex_Labe
   facet_wrap(~Target_Gene, scales = "free_y") +
   stat_compare_means(aes(group = Sex_Label), 
                      method = "wilcox.test", 
-                     label = "p.signif", 
+                     label = "p.format", 
                      label.y.npc = "top",
                      vjust = 0.5, size = 5) +
   scale_fill_manual(values = sex_colors) +
@@ -486,7 +522,14 @@ p_sex <- ggplot(sex_plot_df, aes(x = Phase, y = Corrected_Value, fill = Sex_Labe
   )
 print(p_sex)
 ggsave("C4_Sex_Difference_Age_RIN_Corrected.png", p_sex, width = 6.7, height = 5, dpi = 500)
-
+print(stat_res)
+# A tibble: 4 × 10
+#  Target_Gene Phase   .y.   group1 group2       p p.adj p.format p.signif method
+#  <fct>       <fct>   <chr> <chr>  <chr>    <dbl> <dbl> <chr>    <chr>    <chr> 
+#1 C4A         Prenat… Corr… Female Male   0.00534 0.021 0.0053   **       Wilco…
+#2 C4B         Prenat… Corr… Female Male   0.145   0.44  0.1451   ns       Wilco…
+#3 C4A         Postna… Corr… Female Male   0.780   1     0.7797   ns       Wilco…
+#4 C4B         Postna… Corr… Female Male   0.758   1     0.7576   ns       Wilco…
 
 # ==============================================================================
 # C4 Sex Difference Analysis with Hidden Covariate Correction

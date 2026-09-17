@@ -1,22 +1,22 @@
 # We performed localized imputation using the Osprey software suite (https://github.com/broadinstitute/Osprey)
-# Genotype imputation was performed using the TOPMed reference panel, and variants with an imputation R2 >0.3 were excluded to ensure high-quality data.
+# Genotype imputation was performed using the TOPMed reference panel, and variants with an imputation R2 < 0.3 were excluded to ensure high-quality data.
 ## Pipeline for C4 Region CNV Imputation using Osprey
 ## Reference Panel: 1000 Genomes EAS (East Asian)
-## Input: Genotype imputed VCFs (TOPMed reference, R2 > 0.3 filtered)
+## Input: Genotype imputed VCFs (TOPMed reference, R2 < 0.3 filtered)
 
 ## "Step 1: Filtering variants based on HWE and MAF..."
 # Filter fetal cohort
 plink2 --vcf chr6.dose.vcf.gz \
-      --hwe 1e-10 \
+      --hwe 1e-6 \
       --maf 0.01 \
       --export vcf bgz\
-      --out chr6.fetal.pass
+      --out chr6.fetal.pass2
 # Filter adult cohort
 plink2 --vcf chr6.adult.vcf.gz \
-      --hwe 1e-10 \
+      --hwe 1e-6 \
       --maf 0.01 \
       --export vcf bgz\
-      --out chr6.adult.pass
+      --out chr6.adult.pass2
 
 # Step 2: Extracting MHC region (chr6:24M-34M) and standardizing chr names(Add "chr": '6' to 'chr6')
 bcftools view -r 6:24000000-34000000  chr6.fetal.pass.vcf.gz -Oz -o chr6.region.fetal.vcf.gz 

@@ -6,9 +6,9 @@ library(patchwork)
 
 # 1. Path Configuration
 
-hap_file <- "fetal_onlychb_imputed_haps_refined.R5.txt"
+hap_file <- "/gpfs/hpc/home/chenchao/hanc/project/C4_CNB2025/topmed_analysis/final_check/fetal_onlychb_imputed_haps_refined.R5.txt"
 expr_file <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/bulk_data/stage1.logTMM.ComBat.txt" 
-cov_file <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/bulk_data/prenatalcovariatesToUse.PCAforQTL.txt"
+cov_file <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/bulk_data/prenatalcovariatesToUse.PCAforQTLfromINT.txt"
 
 # ==============================================================================
 # 2. Parse Haplotype Data (Copy Number Calculation)
@@ -70,7 +70,7 @@ formula_str <- paste("Raw_Expr ~", paste(cov_names, collapse = " + "))
 
 fit_cov <- lm(as.formula(formula_str), data = df_merged)
 df_merged$Corrected_Expr <- residuals(fit_cov) + mean(df_merged$Raw_Expr, na.rm = TRUE)
-
+df_prenatal <- df_merged
 # ==============================================================================
 # 6. Visualization
 # ==============================================================================
@@ -124,9 +124,9 @@ library(data.table)
 library(patchwork)
 
 
-hap_file <- "adult_only_imputed_haps_refinedR5.txt"
+hap_file <- "/gpfs/hpc/home/chenchao/hanc/project/C4_CNB2025/topmed_analysis/final_check/adult/adult_only_imputed_haps_refinedR5revisedID.txt"
 expr_file <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/bulk_data/postnatal.logTMM.ComBat.txt" 
-cov_file <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/bulk_data/postnatalcovariatesToUse.PCAforQTL.txt"
+cov_file <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/bulk_data/postnatalcovariatesToUse.PCAforQTLfromINT.txt"
 
 
 haps <- fread(hap_file, header = TRUE)
@@ -174,7 +174,7 @@ formula_str <- paste("Raw_Expr ~", paste(cov_names, collapse = " + "))
 
 fit_cov <- lm(as.formula(formula_str), data = df_merged)
 df_merged$Corrected_Expr <- residuals(fit_cov) + mean(df_merged$Raw_Expr, na.rm = TRUE)
-
+df_postnatal <- df_merged
 # plot
 plot_c4_eqtl <- function(data, x_col, title_text, y_label = "Normalized Expression (C4A)") {
   formula_eqtl <- as.formula(paste("Corrected_Expr ~", x_col))
@@ -219,4 +219,87 @@ print(final_plot)
 
 ggsave("Postnata_Brain_C4A_eQTL_Bulk_Corrected.png", final_plot, width = 10, height = 4, dpi = 400)
 
+# Generate Supplementary Table 5: eQTL Linear Regression Stats
+get_eqtl_stats <- function(data, stage_name, target_gene) {
+  predictors <- c("Total_C4", "C4A_CN", "C4B_CN")
+  res_list <- list()
+  
+  for (pred in predictors) {
+    formula_eqtl <- as.formula(paste("Corrected_Expr ~", pred))
+    fit_eqtl <- lm(formula_eqtl, data = data)
+    
+    summary_fit <- summary(fit_eqtl)
+    slope <- summary_fit$coefficients[2, "Estimate"]
+    std_error <- summary_fit$coefficients[2, "Std. Error"]
+    p_val <- summary_fit$coefficients[2, "Pr(>|t|)"]
+    
+    res_list[[pred]] <- data.frame(
+      Developmental_Stage = stage_name,
+      Target_Gene = target_gene,
+      CNV_Predictor = pred,
+      Slope = slope,
+      Std_Error = std_error,
+      P_value = p_val
+    )
+  }
+  
+  return(bind_rows(res_list))
+}
 
+stats_prenatal <- get_eqtl_stats(df_prenatal, "Prenatal", "C4A")
+stats_postnatal <- get_eqtl_stats(df_postnatal, "Postnatal", "C4A")
+
+supp_table5 <- bind_rows(stats_prenatal, stats_postnatal)
+supp_table5 <- supp_table5 %>%
+  group_by(Developmental_Stage) %>%
+  mutate(FDR = p.adjust(P_value, method = "BH")) %>%
+  ungroup() %>%
+  mutate(
+    Slope = round(Slope, 3),
+    Std_Error = round(Std_Error, 4),
+    P_value = signif(P_value, 3),
+    FDR = signif(FDR, 3)
+  )
+print(supp_table5)
+
+output_csv5 <- "Supplementary_Table_5_eQTL_Stats.csv"
+write.csv(supp_table5, output_csv5, row.names = FALSE, quote = FALSE)
+
+# Calculate 95% CI and P-value for Slope Comparison (Prenatal vs Postnatal)
+
+cat("\nCalculating 95% CIs and Slope Comparison P-values...\n")
+calculate_slope_comparison <- function(df_pre, df_post, x_col) {
+  # 1
+  formula_str <- paste("Corrected_Expr ~", x_col)
+  fit_pre <- lm(as.formula(formula_str), data = df_pre)
+  fit_post <- lm(as.formula(formula_str), data = df_post)
+  
+  # 2. Slope, SE, 95% CI
+  sum_pre <- summary(fit_pre)
+  b_pre <- sum_pre$coefficients[2, "Estimate"]
+  se_pre <- sum_pre$coefficients[2, "Std. Error"]
+  ci_pre <- confint(fit_pre)[2, ]
+  
+  # 3.Slope, SE, 95% CI
+  sum_post <- summary(fit_post)
+  b_post <- sum_post$coefficients[2, "Estimate"]
+  se_post <- sum_post$coefficients[2, "Std. Error"]
+  ci_post <- confint(fit_post)[2, ]
+  
+  # Z = (Beta_post - Beta_pre) / sqrt(SE_post^2 + SE_pre^2)
+  z_stat <- (b_post - b_pre) / sqrt(se_post^2 + se_pre^2)
+  p_val_diff <- 2 * (1 - pnorm(abs(z_stat)))
+  
+  cat(sprintf("Prenatal Slope  = %.3f, 95%% CI = [%.3f, %.3f]\n", b_pre, ci_pre[1], ci_pre[2]))
+  cat(sprintf("Postnatal Slope = %.3f, 95%% CI = [%.3f, %.3f]\n", b_post, ci_post[1], ci_post[2]))
+  cat(sprintf("Comparison P-value = %.2e\n", p_val_diff))
+  
+  return(list(ci_pre = ci_pre, ci_post = ci_post, p_diff = p_val_diff))
+}
+
+# Prenatal Slope  = 0.153, 95% CI = [0.083, 0.224]
+# Postnatal Slope = 0.370, 95% CI = [0.293, 0.447]
+# Comparison P-value = 4.49e-05
+# Prenatal Slope  = 0.141, 95% CI = [0.070, 0.212]
+# Postnatal Slope = 0.325, 95% CI = [0.256, 0.394]
+# Comparison P-value = 2.47e-04

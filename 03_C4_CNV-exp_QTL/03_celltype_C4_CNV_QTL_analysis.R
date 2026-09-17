@@ -62,6 +62,7 @@ plot_c4_eqtl <- function(data, x_col, title_text, y_label = "Normalized Expr (C4
 # ==============================================================================
 # 4. Iterate through each Cell Type: Adjust covariates + Plot data.
 # ==============================================================================
+stats_list_prenatal <- list()
 plot_list <- list()
 
 for (ct in cell_types) {
@@ -109,7 +110,22 @@ for (ct in cell_types) {
   p1 <- plot_c4_eqtl(df_merged, "Total_C4", paste0(ct_label, ": Total C4 vs C4A Expr"), y_label = paste(ct_label, "C4A Expr"))
   p2 <- plot_c4_eqtl(df_merged, "C4A_CN",   paste0(ct_label, ": C4A CN vs C4A Expr"), y_label = NULL)
   p3 <- plot_c4_eqtl(df_merged, "C4B_CN",   paste0(ct_label, ": C4B CN vs C4A Expr"), y_label = NULL)
-  
+  predictors <- c("Total_C4", "C4A_CN", "C4B_CN")
+  ct_stats <- list()
+  for(pred in predictors) {
+    fit <- lm(as.formula(paste("Corrected_Expr ~", pred)), data = df_merged)
+    sum_fit <- summary(fit)
+    ct_stats[[pred]] <- data.frame(
+      Developmental_Stage = "Prenatal",
+      Cell_Type = ct_label,
+      Target_Gene = "C4A",
+      CNV_Predictor = pred,
+      Slope = sum_fit$coefficients[2, "Estimate"],
+      Std_Error = sum_fit$coefficients[2, "Std. Error"],
+      P_value = sum_fit$coefficients[2, "Pr(>|t|)"]
+    )
+  }
+  stats_list_prenatal[[ct]] <- bind_rows(ct_stats)
   row_plot <- p1 | p2 | p3
   plot_list[[ct]] <- row_plot
 }
@@ -133,18 +149,17 @@ cat("Done! Saved to Fetal_Brain_C4A_eQTL_CellType_Corrected.png\n")
 
 ################## Postnatal ##################################
 
-################## Prenatal ##################################
 library(tidyverse)
 library(data.table)
 library(patchwork)
 
 
-hap_file <- "/gpfs/hpc/home/chenchao/hanc/project/C4_CNB2025/topmed_analysis/final_check/adult_onlychb_imputed_haps_refined.R5.txt"
+hap_file <- "/gpfs/hpc/home/chenchao/hanc/project/C4_CNB2025/topmed_analysis/final_check/adult/adult_only_imputed_haps_refinedR5revisedID.txt"
 expr_dir <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/removeversionIDmapping/cts_expr/"
 cov_dir  <- "/gpfs/hpc/home/chenchao/hanc/project/2023project_develop_eQTL/04_analysis/05deconvolution/cts-qtl-output-rmgeneversionID/adult/"
 
 
-cell_types <- c("postnatal_AST", "postnatal_MG", "postnatal_IN", "postnatal_ExNeu","OL","postnatal_OPC")
+cell_types <- c("postnatal_AST", "postnatal_MG", "postnatal_IN", "postnatal_ExNeu")
 
 # ================================================================================
 # 2. Read and parse Haplotype (copy num)
@@ -197,11 +212,12 @@ plot_c4_eqtl <- function(data, x_col, title_text, y_label = "Normalized Expr (C4
 # ==============================================================================
 # 4. Iterate through each Cell Type: Adjust covariates + Plot data.
 # ==============================================================================
+stats_list_postnatal <- list()
 plot_list <- list()
 
 for (ct in cell_types) {
   cat(sprintf("Processing %s...\n", ct))
-  ct_label <- gsub("prenatal_", "", ct)
+  ct_label <- gsub("postnatal_", "", ct)
   cov_file <- paste0(cov_dir, ct, "/covariates.cov.txt")
   cov_raw <- fread(cov_file, header = TRUE)
   
@@ -213,7 +229,7 @@ for (ct in cell_types) {
     as.data.frame() %>%
     rownames_to_column("Sample")
   cov_df[, -1] <- lapply(cov_df[, -1], as.numeric)
-  expr_file <- paste0(expr_dir, "stage1_", ct, ".txt")
+  expr_file <- paste0(expr_dir, "adult_", ct, ".txt")
   expr_raw <- fread(expr_file, header = TRUE)
   colnames(expr_raw)[1] <- "Gene"
   c4a_expr <- expr_raw %>%
@@ -245,6 +261,23 @@ for (ct in cell_types) {
   p2 <- plot_c4_eqtl(df_merged, "C4A_CN",   paste0(ct_label, ": C4A CN vs C4A Expr"), y_label = NULL)
   p3 <- plot_c4_eqtl(df_merged, "C4B_CN",   paste0(ct_label, ": C4B CN vs C4A Expr"), y_label = NULL)
   
+predictors <- c("Total_C4", "C4A_CN", "C4B_CN")
+  ct_stats <- list()
+  for(pred in predictors) {
+    fit <- lm(as.formula(paste("Corrected_Expr ~", pred)), data = df_merged)
+    sum_fit <- summary(fit)
+    ct_stats[[pred]] <- data.frame(
+      Developmental_Stage = "Postnatal",
+      Cell_Type = ct_label,
+      Target_Gene = "C4A",
+      CNV_Predictor = pred,
+      Slope = sum_fit$coefficients[2, "Estimate"],
+      Std_Error = sum_fit$coefficients[2, "Std. Error"],
+      P_value = sum_fit$coefficients[2, "Pr(>|t|)"]
+    )
+  }
+  stats_list_postnatal[[ct]] <- bind_rows(ct_stats)
+
   row_plot <- p1 | p2 | p3
   plot_list[[ct]] <- row_plot
 }
@@ -262,5 +295,27 @@ final_grid <- wrap_plots(plot_list, ncol = 1) +
 
 print(final_grid)
 
-ggsave("postnatal_Brain_C4A_eQTL_CellType_Corrected.png", final_grid, width = 14, height = 18, dpi = 400)
-ggsave("Adult_Brain_C4A_eQTL_CellType_Corrected.pdf", final_grid, width = 14, height = 18)
+ggsave("postnatal_Brain_C4A_eQTL_CellType_Corrected2.png", final_grid, width = 14, height = 18, dpi = 400)
+ggsave("Adult_Brain_C4A_eQTL_CellType_Corrected2.pdf", final_grid, width = 14, height = 18)
+
+# 6. Generate Supplementary Table 6: Cell-Type Specific eQTL Stats
+supp_table6 <- bind_rows(
+  bind_rows(stats_list_prenatal),
+  bind_rows(stats_list_postnatal)
+)
+
+# Calculate FDR (multiple test correction by developmental stage grouping)
+supp_table6 <- supp_table6 %>%
+  group_by(Developmental_Stage) %>%
+  mutate(FDR = p.adjust(P_value, method = "BH")) %>%
+  ungroup() %>%
+  mutate(
+    Slope = round(Slope, 3),
+    Std_Error = round(Std_Error, 4),
+    P_value = signif(P_value, 3),
+    FDR = signif(FDR, 3)
+  )
+
+print(as.data.frame(supp_table6))
+output_csv6 <- "Supplementary_Table_6_CellType_eQTL_Stats.csv"
+write.csv(supp_table6, output_csv6, row.names = FALSE, quote = FALSE)
