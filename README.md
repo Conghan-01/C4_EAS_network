@@ -1,8 +1,8 @@
 # C4-EAS-Brain-Network | East Asian Brain C4 Regulatory Atlas
 
 > Prenatal brain gene co-expression networks link complement signaling in psychiatric disorders
-> Central South University
-> Manuscript in submission · 2026
+> | Central South University
+> | Manuscript in submission · 2026
 
 ![Pipeline Status](https://img.shields.io/badge/Pipeline-Stable-success)
 ![License](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey)
