@@ -1,6 +1,6 @@
 # C4-EAS-Brain-Network | East Asian Brain C4 Regulatory Atlas
 
-> Spatiotemporal Regulation, Structural Variation, and Co-expression Networks of the *C4* Locus in the Developing Human Brain
+> Prenatal brain gene co-expression networks link complement signaling in psychiatric disorders
 > Central South University
 > Manuscript in submission · 2026
 
